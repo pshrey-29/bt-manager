@@ -1,11 +1,12 @@
 #pragma once
 
-#include <optional>
-#include <string>
+#include "btmanager/BluetoothDevice.h"
+
+#include <vector>
 
 namespace btmanager
 {
 
-std::optional<std::string> findConnectedNothingEar();
+std::vector<BluetoothDevice> getConnectedDevices();
 
-}
+} // namespace btmanager

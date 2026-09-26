@@ -7,7 +7,7 @@
 namespace btmanager
 {
 
-std::optional<std::string> findConnectedNothingEar()
+std::vector<BluetoothDevice> getConnectedDevices()
 {
     auto connection = sdbus::createSystemBusConnection();
     auto proxy = sdbus::createProxy(
@@ -24,6 +24,8 @@ std::optional<std::string> findConnectedNothingEar()
         .onInterface("org.freedesktop.DBus.ObjectManager")
         .withArguments()
         .storeResultsTo(objects);
+
+    std::vector<BluetoothDevice> devices;
 
     for (const auto& [objectPath, interfaces] : objects)
     {
@@ -59,11 +61,17 @@ std::optional<std::string> findConnectedNothingEar()
         std::string address = addressIt->second.get<std::string>();
         bool connected = connectedIt->second.get<bool>();
 
-        if (name == "Nothing Ear (a)" && connected)
-            return address;
+        if (!connected)
+            continue;
+
+        devices.push_back({
+            name,
+            address,
+            objectPath
+        });
     }
 
-    return std::nullopt;
+    return devices;
 }
 
-}
+} // namespace btmanager
