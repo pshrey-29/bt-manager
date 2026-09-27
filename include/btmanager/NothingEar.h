@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include "btmanager/BatteryInfo.h"
@@ -19,7 +20,7 @@ public:
     NothingEar& operator=(const NothingEar&) = delete;
 
     bool connect();
-    bool getBattery(BatteryInfo& out);
+    std::optional<BatteryInfo> getBattery();
     void disconnect();
 
 private:

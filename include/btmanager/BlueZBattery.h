@@ -1,14 +1,14 @@
 #pragma once
 
+#include "btmanager/BatteryInfo.h"
 #include "btmanager/BluetoothDevice.h"
 
-#include <cstdint>
 #include <optional>
 
 namespace btmanager
 {
 
-std::optional<uint8_t> getBatteryLevel(
+std::optional<BatteryInfo> getBatteryLevel(
     const BluetoothDevice& device);
 
 } // namespace btmanager

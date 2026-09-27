@@ -5,7 +5,7 @@
 namespace btmanager
 {
 
-std::optional<uint8_t> getBatteryLevel(
+std::optional<BatteryInfo> getBatteryLevel(
     const BluetoothDevice& device)
 {
     try
@@ -29,7 +29,10 @@ std::optional<uint8_t> getBatteryLevel(
                 sdbus::PropertyName{"Percentage"})
             .storeResultsTo(value);
 
-        return value.get<uint8_t>();
+        BatteryInfo battery;
+        battery.percentage = value.get<uint8_t>();
+
+        return battery;
     }
     catch (const sdbus::Error&)
     {

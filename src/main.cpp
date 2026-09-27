@@ -5,6 +5,43 @@
 
 #include <iostream>
 
+void printBatteryInfo(const btmanager::BatteryInfo& battery)
+{
+    if (battery.percentage)
+    {
+        std::cout << "  Battery: "
+                  << static_cast<int>(*battery.percentage)
+                  << "%\n";
+    }
+
+    if (battery.left)
+    {
+        std::cout << "  Left:  "
+                  << static_cast<int>(*battery.left)
+                  << "% "
+                  << (battery.left_charging ? "(charging)" : "")
+                  << '\n';
+    }
+
+    if (battery.right)
+    {
+        std::cout << "  Right: "
+                  << static_cast<int>(*battery.right)
+                  << "% "
+                  << (battery.right_charging ? "(charging)" : "")
+                  << '\n';
+    }
+
+    if (battery.case_battery)
+    {
+        std::cout << "  Case:  "
+                  << static_cast<int>(*battery.case_battery)
+                  << "% "
+                  << (battery.case_charging ? "(charging)" : "")
+                  << '\n';
+    }
+}
+
 int main()
 {
     auto devices = btmanager::getConnectedDevices();
@@ -29,31 +66,15 @@ int main()
                 return 1;
             }
 
-            btmanager::BatteryInfo battery;
+            auto battery = ear.getBattery();
 
-            if (!ear.getBattery(battery))
+            if (!battery)
             {
                 std::cerr << "Failed to read battery information.\n";
                 return 1;
             }
 
-            std::cout << "  Left:  "
-                      << static_cast<int>(battery.left)
-                      << "% "
-                      << (battery.left_charging ? "(charging)" : "")
-                      << '\n';
-
-            std::cout << "  Right: "
-                      << static_cast<int>(battery.right)
-                      << "% "
-                      << (battery.right_charging ? "(charging)" : "")
-                      << '\n';
-
-            std::cout << "  Case:  "
-                      << static_cast<int>(battery.case_battery)
-                      << "% "
-                      << (battery.case_charging ? "(charging)" : "")
-                      << '\n';
+            printBatteryInfo(*battery);
         }
         else
         {
@@ -61,9 +82,7 @@ int main()
 
             if (battery)
             {
-                std::cout << "  Battery: "
-                          << static_cast<int>(*battery)
-                          << "%\n";
+                printBatteryInfo(*battery);
             }
             else
             {

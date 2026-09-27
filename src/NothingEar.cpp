@@ -88,12 +88,12 @@ bool NothingEar::connect()
     return true;
 }
 
-bool NothingEar::getBattery(BatteryInfo& out)
+std::optional<BatteryInfo> NothingEar::getBattery()
 {
     if (socket_fd_ < 0)
     {
         std::cerr << "Not connected: call connect() first\n";
-        return false;
+        return std::nullopt;
     }
 
     constexpr uint8_t OPERATION_ID = 5;
@@ -103,7 +103,7 @@ bool NothingEar::getBattery(BatteryInfo& out)
     {
         std::cerr << "Failed to send full command: "
                   << std::strerror(errno) << '\n';
-        return false;
+        return std::nullopt;
     }
 
     // KNOWN LIMITATION: RFCOMM is a byte stream, so a single recv() is
@@ -116,16 +116,23 @@ bool NothingEar::getBattery(BatteryInfo& out)
     {
         std::cerr << "Failed to read response: "
                   << std::strerror(errno) << '\n';
-        return false;
+        return std::nullopt;
     }
 
     // Header / op_id / CRC verification and record parsing all live
     // in the protocol layer; just propagate its result.
-    return parseBatteryResponse(
-        rx,
-        static_cast<std::size_t>(received),
-        OPERATION_ID,
-        out);
+    BatteryInfo battery;
+
+    if (!parseBatteryResponse(
+            rx,
+            static_cast<std::size_t>(received),
+            OPERATION_ID,
+            battery))
+    {
+        return std::nullopt;
+    }
+
+    return battery;
 }
 
 void NothingEar::disconnect()
