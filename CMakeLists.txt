@@ -25,6 +25,7 @@ add_executable(btinfo
     src/NothingEar.cpp
     src/NothingProtocol.cpp
     src/BluetoothDiscovery.cpp
+    src/BlueZBattery.cpp
 )
 
 target_include_directories(btinfo
