@@ -4,6 +4,9 @@
 #include "btmanager/NothingEar.h"
 
 #include <iostream>
+#include <string>
+
+#include <spdlog/spdlog.h>
 
 void printBatteryInfo(const btmanager::BatteryInfo& battery)
 {
@@ -42,8 +45,47 @@ void printBatteryInfo(const btmanager::BatteryInfo& battery)
     }
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    bool verbose = false;
+    bool debug = false;
+
+    for (int i = 1; i < argc; ++i)
+    {
+        std::string arg = argv[i];
+
+        if (arg == "--verbose")
+        {
+            verbose = true;
+        }
+        else if (arg == "--debug")
+        {
+            debug = true;
+        }
+        else
+        {
+            spdlog::error("Unknown option: {}", arg);
+            return 1;
+        }
+    }
+
+    if (debug)
+    {
+        spdlog::set_level(spdlog::level::debug);
+    }
+    else if (verbose)
+    {
+        spdlog::set_level(spdlog::level::info);
+    }
+    else
+    {
+        spdlog::set_level(spdlog::level::err);
+    }
+
+    spdlog::debug(
+        "CLI mode: {}",
+        debug ? "debug" : verbose ? "verbose" : "normal");
+
     auto devices = btmanager::getConnectedDevices();
 
     if (devices.empty())
@@ -62,7 +104,7 @@ int main()
 
             if (!ear.connect())
             {
-                std::cerr << "Failed to connect to Nothing Ear (a).\n";
+                spdlog::error("Failed to connect to Nothing Ear (a).");
                 return 1;
             }
 
@@ -70,7 +112,7 @@ int main()
 
             if (!battery)
             {
-                std::cerr << "Failed to read battery information.\n";
+                spdlog::error("Failed to read battery information.");
                 return 1;
             }
 

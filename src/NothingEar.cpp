@@ -1,5 +1,6 @@
 #include "btmanager/NothingEar.h"
 
+#include "btmanager/HexUtils.h"
 #include "btmanager/NothingProtocol.h"
 
 #include <bluetooth/bluetooth.h>
@@ -11,13 +12,14 @@
 
 #include <cerrno>
 #include <cstring>
-#include <iostream>
 
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <spdlog/spdlog.h>
 
 namespace btmanager
 {
@@ -55,13 +57,20 @@ NothingEar::~NothingEar()
 
 bool NothingEar::connect()
 {
+    spdlog::info("Attempting RFCOMM connection");
+    spdlog::debug(
+        "Target: {} on RFCOMM channel {}",
+        mac_,
+        channel_);
+
     // Create an RFCOMM socket.
     socket_fd_ = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
 
     if (socket_fd_ < 0)
     {
-        std::cerr << "Failed to create socket: "
-                  << std::strerror(errno) << '\n';
+        spdlog::error(
+            "Failed to create RFCOMM socket: {}",
+            std::strerror(errno));
         return false;
     }
 
@@ -77,13 +86,16 @@ bool NothingEar::connect()
             reinterpret_cast<sockaddr*>(&address),
             sizeof(address)) < 0)
     {
-        std::cerr << "Failed to connect: "
-                  << std::strerror(errno) << '\n';
+        spdlog::error(
+            "RFCOMM connection failed: {}",
+            std::strerror(errno));
 
         close(socket_fd_);
         socket_fd_ = -1;
         return false;
     }
+
+    spdlog::info("RFCOMM connection to {} successful", mac_);
 
     return true;
 }
@@ -92,7 +104,7 @@ std::optional<BatteryInfo> NothingEar::getBattery()
 {
     if (socket_fd_ < 0)
     {
-        std::cerr << "Not connected: call connect() first\n";
+        spdlog::error("Not connected: call connect() first");
         return std::nullopt;
     }
 
@@ -101,10 +113,16 @@ std::optional<BatteryInfo> NothingEar::getBattery()
 
     if (!sendAll(socket_fd_, command.data(), command.size()))
     {
-        std::cerr << "Failed to send full command: "
-                  << std::strerror(errno) << '\n';
+        spdlog::error(
+            "Failed to send battery command: {}",
+            std::strerror(errno));
         return std::nullopt;
     }
+
+    spdlog::debug(
+        "TX ({} bytes): {}",
+        command.size(),
+        toHexString(command.data(), command.size()));
 
     // KNOWN LIMITATION: RFCOMM is a byte stream, so a single recv() is
     // not guaranteed to contain a complete protocol response. The
@@ -114,13 +132,22 @@ std::optional<BatteryInfo> NothingEar::getBattery()
     ssize_t received = recv(socket_fd_, rx, sizeof(rx), 0);
     if (received <= 0)
     {
-        std::cerr << "Failed to read response: "
-                  << std::strerror(errno) << '\n';
+        spdlog::error(
+            "Failed to read battery response: {}",
+            std::strerror(errno));
         return std::nullopt;
     }
 
+    spdlog::debug(
+        "RX ({} bytes): {}",
+        received,
+        toHexString(
+            rx,
+            static_cast<std::size_t>(received)));
+
     // Header / op_id / CRC verification and record parsing all live
-    // in the protocol layer; just propagate its result.
+    // in the protocol layer, which logs its own rejections;
+    // just propagate the result.
     BatteryInfo battery;
 
     if (!parseBatteryResponse(
@@ -131,6 +158,8 @@ std::optional<BatteryInfo> NothingEar::getBattery()
     {
         return std::nullopt;
     }
+
+    spdlog::info("Battery request completed successfully");
 
     return battery;
 }

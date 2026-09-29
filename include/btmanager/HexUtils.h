@@ -2,11 +2,13 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace btmanager
 {
 
-// General-purpose debug helper: hex-dump a byte buffer.
-void printHex(const uint8_t* data, std::size_t length, const char* label);
+// Format a byte buffer as space-separated hex ("55 60 01").
+// Used for debug logging of raw protocol frames.
+std::string toHexString(const uint8_t* data, std::size_t length);
 
 } // namespace btmanager

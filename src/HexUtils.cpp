@@ -1,19 +1,25 @@
 #include "btmanager/HexUtils.h"
 
-#include <iostream>
-
 #include <iomanip>
+#include <sstream>
 
 namespace btmanager
 {
 
-void printHex(const uint8_t* data, std::size_t length, const char* label)
+std::string toHexString(const uint8_t* data, std::size_t length)
 {
-    std::cout << label << " (" << length << " bytes): ";
+    std::ostringstream out;
+    out << std::hex << std::setfill('0');
+
     for (std::size_t i = 0; i < length; ++i)
-        std::cout << std::hex << std::setw(2) << std::setfill('0')
-                  << static_cast<int>(data[i]) << ' ';
-    std::cout << std::dec << '\n';
+    {
+        if (i > 0)
+            out << ' ';
+
+        out << std::setw(2) << static_cast<int>(data[i]);
+    }
+
+    return out.str();
 }
 
 } // namespace btmanager

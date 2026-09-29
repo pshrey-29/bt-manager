@@ -4,74 +4,98 @@
 
 #include <map>
 
+#include <spdlog/spdlog.h>
+
 namespace btmanager
 {
 
 std::vector<BluetoothDevice> getConnectedDevices()
 {
-    auto connection = sdbus::createSystemBusConnection();
-    auto proxy = sdbus::createProxy(
-        *connection,
-        sdbus::ServiceName{"org.bluez"},
-        sdbus::ObjectPath{"/"}
-    );
-
-    std::map<sdbus::ObjectPath,
-             std::map<sdbus::InterfaceName,
-                      std::map<sdbus::PropertyName, sdbus::Variant>>> objects;
-
-    proxy->callMethod("GetManagedObjects")
-        .onInterface("org.freedesktop.DBus.ObjectManager")
-        .withArguments()
-        .storeResultsTo(objects);
-
-    std::vector<BluetoothDevice> devices;
-
-    for (const auto& [objectPath, interfaces] : objects)
+    try
     {
-        auto deviceIt = interfaces.find(
-            sdbus::InterfaceName{"org.bluez.Device1"}
+        spdlog::info("Starting Bluetooth discovery");
+
+        auto connection = sdbus::createSystemBusConnection();
+        auto proxy = sdbus::createProxy(
+            *connection,
+            sdbus::ServiceName{"org.bluez"},
+            sdbus::ObjectPath{"/"}
         );
 
-        if (deviceIt == interfaces.end())
-            continue;
+        std::map<sdbus::ObjectPath,
+                 std::map<sdbus::InterfaceName,
+                          std::map<sdbus::PropertyName, sdbus::Variant>>> objects;
 
-        const auto& properties = deviceIt->second;
+        proxy->callMethod("GetManagedObjects")
+            .onInterface("org.freedesktop.DBus.ObjectManager")
+            .withArguments()
+            .storeResultsTo(objects);
 
-        auto nameIt = properties.find(
-            sdbus::PropertyName{"Name"}
-        );
+        std::vector<BluetoothDevice> devices;
 
-        auto addressIt = properties.find(
-            sdbus::PropertyName{"Address"}
-        );
-
-        auto connectedIt = properties.find(
-            sdbus::PropertyName{"Connected"}
-        );
-
-        if (nameIt == properties.end() ||
-            addressIt == properties.end() ||
-            connectedIt == properties.end())
+        for (const auto& [objectPath, interfaces] : objects)
         {
-            continue;
+            auto deviceIt = interfaces.find(
+                sdbus::InterfaceName{"org.bluez.Device1"}
+            );
+
+            if (deviceIt == interfaces.end())
+                continue;
+
+            const auto& properties = deviceIt->second;
+
+            auto nameIt = properties.find(
+                sdbus::PropertyName{"Name"}
+            );
+
+            auto addressIt = properties.find(
+                sdbus::PropertyName{"Address"}
+            );
+
+            auto connectedIt = properties.find(
+                sdbus::PropertyName{"Connected"}
+            );
+
+            if (nameIt == properties.end() ||
+                addressIt == properties.end() ||
+                connectedIt == properties.end())
+            {
+                continue;
+            }
+
+            std::string name = nameIt->second.get<std::string>();
+            std::string address = addressIt->second.get<std::string>();
+            bool connected = connectedIt->second.get<bool>();
+
+            if (!connected)
+                continue;
+
+            spdlog::debug(
+                "Found device: {} ({})",
+                name,
+                address);
+
+            devices.push_back({
+                name,
+                address,
+                objectPath
+            });
         }
 
-        std::string name = nameIt->second.get<std::string>();
-        std::string address = addressIt->second.get<std::string>();
-        bool connected = connectedIt->second.get<bool>();
+        spdlog::info(
+            "Discovery completed: {} connected device(s) found",
+            devices.size());
 
-        if (!connected)
-            continue;
-
-        devices.push_back({
-            name,
-            address,
-            objectPath
-        });
+        return devices;
     }
-
-    return devices;
+    catch (const sdbus::Error& e)
+    {
+        spdlog::error(
+            "Bluetooth discovery failed: {}: {}",
+            e.getName(),
+            e.getMessage());
+        return {};
+    }
 }
 
 } // namespace btmanager

@@ -1,5 +1,9 @@
 #include "btmanager/NothingProtocol.h"
 
+#include "btmanager/HexUtils.h"
+
+#include <spdlog/spdlog.h>
+
 namespace btmanager
 {
 
@@ -57,18 +61,33 @@ bool parseBatteryResponse(
     // 2-byte record per component [component_id] [battery byte]
     // 2-byte CRC
     if (length < 11)
+    {
+        spdlog::error(
+            "Invalid response size: {} bytes (minimum 11)", length);
         return false;
+    }
 
     // Response header
     if (!(data[0] == kFrameByte0 &&
           data[1] == kFrameByte1 &&
           data[2] == kFrameByte2 &&
           data[3] == kBatteryResponseByte3))
+    {
+        spdlog::error(
+            "Invalid response header: {}",
+            toHexString(data, 4));
         return false;
+    }
 
     // Operation ID
     if (data[7] != expected_operation_id)
+    {
+        spdlog::error(
+            "Operation ID mismatch: expected {}, received {}",
+            expected_operation_id,
+            data[7]);
         return false;
+    }
 
     // CRC
     uint16_t calculated_crc =
@@ -79,10 +98,21 @@ bool parseBatteryResponse(
         (static_cast<uint16_t>(data[length - 1]) << 8);
 
     if (calculated_crc != received_crc)
+    {
+        spdlog::error(
+            "CRC mismatch: calculated {:04x}, received {:04x}",
+            calculated_crc,
+            received_crc);
         return false;
+    }
 
     // Number of battery records
     uint8_t component_count = data[8];
+
+    spdlog::debug(
+        "Response operation ID: {}, component count: {}",
+        data[7],
+        component_count);
 
     // Records start at byte 9.
     // Each record is:
@@ -93,7 +123,14 @@ bool parseBatteryResponse(
 
     // Leave the final 2 bytes for CRC.
     if (records_end + 2 > length)
+    {
+        spdlog::error(
+            "Invalid component count: {} (needs {} bytes, have {})",
+            component_count,
+            records_end + 2,
+            length);
         return false;
+    }
 
     for (uint8_t i = 0; i < component_count; ++i)
     {
@@ -107,6 +144,12 @@ bool parseBatteryResponse(
 
         bool charging =
             (battery_byte & kChargingMask) != 0;
+
+        spdlog::debug(
+            "Component {:#04x}: {}%{}",
+            device_id,
+            percentage,
+            charging ? " (charging)" : "");
 
         switch (device_id)
         {
@@ -126,6 +169,9 @@ bool parseBatteryResponse(
                 break;
 
             default:
+                spdlog::debug(
+                    "Unknown battery device ID: {:#04x}, ignoring",
+                    device_id);
                 break;
         }
     }

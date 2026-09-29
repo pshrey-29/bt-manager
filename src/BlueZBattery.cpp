@@ -2,6 +2,8 @@
 
 #include <sdbus-c++/sdbus-c++.h>
 
+#include <spdlog/spdlog.h>
+
 namespace btmanager
 {
 
@@ -10,6 +12,8 @@ std::optional<BatteryInfo> getBatteryLevel(
 {
     try
     {
+        spdlog::info("Querying Battery1 for {}", device.name);
+
         auto connection = sdbus::createSystemBusConnection();
 
         auto proxy = sdbus::createProxy(
@@ -32,11 +36,42 @@ std::optional<BatteryInfo> getBatteryLevel(
         BatteryInfo battery;
         battery.percentage = value.get<uint8_t>();
 
+        if (*battery.percentage > 100)
+        {
+            spdlog::error(
+                "Invalid Battery1 percentage for {}: {}",
+                device.name,
+                *battery.percentage);
+            return std::nullopt;
+        }
+
+        spdlog::debug(
+            "Battery1 for {}: {}%",
+            device.name,
+            *battery.percentage);
+
         return battery;
     }
-    catch (const sdbus::Error&)
+    catch (const sdbus::Error& e)
     {
         // Interface/property absent or call failed: this device exposes no usable Battery1 data.
+        const std::string error_name = e.getName();
+
+        if (error_name == "org.freedesktop.DBus.Error.UnknownMethod" ||
+            error_name == "org.freedesktop.DBus.Error.UnknownInterface" ||
+            error_name == "org.freedesktop.DBus.Error.InvalidArgs")
+        {
+            spdlog::debug("Battery1 not available for {}", device.name);
+        }
+        else
+        {
+            spdlog::error(
+                "Battery1 query failed for {}: {}: {}",
+                device.name,
+                error_name,
+                e.getMessage());
+        }
+
         return std::nullopt;
     }
 }

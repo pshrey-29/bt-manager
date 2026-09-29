@@ -19,6 +19,8 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(sdbus-cpp)
 
+find_package(spdlog REQUIRED)
+
 add_executable(btinfo
     src/main.cpp
     src/HexUtils.cpp
@@ -37,4 +39,5 @@ target_link_libraries(btinfo
     PRIVATE
         SDBusCpp::sdbus-c++
         bluetooth
+        spdlog::spdlog
 )
