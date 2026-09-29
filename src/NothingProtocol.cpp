@@ -2,6 +2,8 @@
 
 #include "btmanager/HexUtils.h"
 
+#include <chrono>
+
 #include <spdlog/spdlog.h>
 
 namespace btmanager
@@ -25,6 +27,15 @@ uint16_t crc16(const uint8_t* data, std::size_t length)
     }
 
     return crc;
+}
+
+uint8_t generateOperationId()
+{
+    auto now = std::chrono::steady_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()).count();
+
+    return static_cast<uint8_t>(ms % 250);
 }
 
 std::vector<uint8_t> buildBatteryCommand(uint8_t operation_id)
@@ -110,7 +121,8 @@ bool parseBatteryResponse(
     uint8_t component_count = data[8];
 
     spdlog::debug(
-        "Response operation ID: {}, component count: {}",
+        "Response operation ID: {:#04X} ({}), component count: {}",
+        data[7],
         data[7],
         component_count);
 

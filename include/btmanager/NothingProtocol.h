@@ -28,6 +28,10 @@ inline constexpr uint8_t kChargingMask = 0x80;
 
 uint16_t crc16(const uint8_t* data, std::size_t length);
 
+// A one-byte operation ID is generated for each request and must match the ID echoed in the response.
+// It is a request/correlation ID, not a command ID.
+uint8_t generateOperationId();
+
 std::vector<uint8_t> buildBatteryCommand(uint8_t operation_id);
 
 bool parseBatteryResponse(

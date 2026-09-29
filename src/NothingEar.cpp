@@ -108,8 +108,14 @@ std::optional<BatteryInfo> NothingEar::getBattery()
         return std::nullopt;
     }
 
-    constexpr uint8_t OPERATION_ID = 5;
-    std::vector<uint8_t> command = buildBatteryCommand(OPERATION_ID);
+    const uint8_t operation_id = generateOperationId();
+
+    spdlog::debug(
+        "Request operation ID: {:#04X} ({})",
+        operation_id,
+        operation_id);
+
+    std::vector<uint8_t> command = buildBatteryCommand(operation_id);
 
     if (!sendAll(socket_fd_, command.data(), command.size()))
     {
@@ -153,7 +159,7 @@ std::optional<BatteryInfo> NothingEar::getBattery()
     if (!parseBatteryResponse(
             rx,
             static_cast<std::size_t>(received),
-            OPERATION_ID,
+            operation_id,
             battery))
     {
         return std::nullopt;
