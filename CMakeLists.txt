@@ -11,6 +11,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(FetchContent)
 
+# We embed sdbus-c++ statically; don't let its install rules
+# pollute `cmake --install` with its headers, docs, and archives.
+set(SDBUSCPP_INSTALL OFF)
+
 FetchContent_Declare(
     sdbus-cpp
     GIT_REPOSITORY https://github.com/Kistler-Group/sdbus-cpp.git
@@ -40,4 +44,10 @@ target_link_libraries(btinfo
         SDBusCpp::sdbus-c++
         bluetooth
         spdlog::spdlog
+)
+
+include(GNUInstallDirs)
+
+install(TARGETS btinfo
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
